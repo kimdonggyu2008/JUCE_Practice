@@ -1,0 +1,37 @@
+# CMake
+/build/
+/out/
+CMakeCache.txt
+CMakeFiles/
+CMakeSettings.json
+cmake_install.cmake
+*.cmake
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.db
+*.opendb
+
+# Compiled Plugin Artifacts
+*.vst3
+*.au
+*.component
+*.app
+*.exe
+*.dll
+*.pdb
+
+# JUCE Generated
+/JuceLibraryCode/
+
+# AudioPluginHost 저장 파일 (테스트용, 커밋 안 함)
+*.filtergraph
+
+# OS Specific
+.DS_Store
+Thumbs.db

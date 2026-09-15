@@ -6,7 +6,16 @@ MidiArpeggiatorEditor::MidiArpeggiatorEditor (MidiArpeggiatorProcessor& p)
 {
     setSize (400, 300);
 
+    rateSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 70, 20);
+    rateSlider.setTextValueSuffix (" ms");
+
+    rateLabel.setText ("Rate", juce::dontSendNotification);
+    rateLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (rateLabel);
     // 초당 30번 timerCallback()을 불러달라고 등록. 소멸자에서 자동으로 멈춘다.
+    rateAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+                     audioProcessor.apvts, "RATE", rateSlider); 
+    addAndMakeVisible (rateSlider);
     startTimerHz (30);
 }
 
@@ -43,7 +52,7 @@ void MidiArpeggiatorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (18.0f);
-    g.drawFittedText ("MIDI Arpeggiator - M0", bounds.removeFromTop (34),
+    g.drawFittedText ("MIDI Arpeggiator", bounds.removeFromTop (34),
                       juce::Justification::centred, 1);
 
     g.setColour (juce::Colours::grey);
@@ -51,11 +60,20 @@ void MidiArpeggiatorEditor::paint (juce::Graphics& g)
     g.drawFittedText ("Held notes", bounds.removeFromTop (22),
                       juce::Justification::centred, 1);
 
+    bounds.removeFromBottom (56);
+
     g.setColour (juce::Colours::aqua);
     g.setFont (17.0f);
     g.drawFittedText (heldNotesText, bounds, juce::Justification::centred, 5);
+
+    
 }
 
 void MidiArpeggiatorEditor::resized()
 {
+    auto bounds = getLocalBounds().reduced (12);
+    auto bottom = bounds.removeFromBottom (56);
+
+    rateLabel.setBounds (bottom.removeFromTop (20));
+    rateSlider.setBounds (bottom);
 }

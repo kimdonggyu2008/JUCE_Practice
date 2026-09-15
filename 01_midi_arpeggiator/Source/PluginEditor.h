@@ -21,6 +21,9 @@ private:
 
     // 화면에 그릴 문자열. timerCallback이 갱신하고 paint가 읽는다 (둘 다 UI 스레드).
     juce::String heldNotesText { "(none)" };
+    juce::Slider rateSlider;
+    juce::Label rateLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> rateAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiArpeggiatorEditor)
 };

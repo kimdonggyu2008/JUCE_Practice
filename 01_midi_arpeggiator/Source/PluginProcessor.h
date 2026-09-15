@@ -40,6 +40,9 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    juce::AudioProcessorValueTreeState apvts;
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
     // UI가 화면에 그리려고 읽어가는 "지금 눌려있는 노트" 스냅샷.
     // 오디오 스레드가 쓰고 UI 스레드가 읽으므로 atomic이어야 한다 (아래 설명 참고).
     const std::array<std::atomic<bool>, 128>& getNoteIsHeldSnapshot() const { return noteIsHeld; }
@@ -58,6 +61,8 @@ private:
     int lastPlayedNote = -1;              // 지금 울리고 있는 노트 (-1 = 없음)
 
     int currentStepIndex = 0;
+
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiArpeggiatorProcessor)
 };

@@ -43,6 +43,7 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         {
             int noteNumber = message.getNoteNumber();
             heldNotes.push_back (noteNumber);
+            velocityForNote[(size_t) noteNumber] = message.getVelocity();
             noteIsHeld[(size_t) noteNumber].store (true, std::memory_order_relaxed);
         }
         else if (message.isNoteOff())
@@ -82,7 +83,7 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         {
             currentStepIndex = (currentStepIndex + 1) % (int) heldNotes.size();
             lastPlayedNote = heldNotes[(size_t) currentStepIndex];
-            midiMessages.addEvent (juce::MidiMessage::noteOn (1, lastPlayedNote, (juce::uint8) 127), offset);
+            midiMessages.addEvent (juce::MidiMessage::noteOn (1, lastPlayedNote, velocityForNote[(size_t) lastPlayedNote]), offset);
         }
     }
 

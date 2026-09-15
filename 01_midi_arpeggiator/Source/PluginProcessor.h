@@ -47,6 +47,7 @@ public:
 private:
     // 눌린 순서가 유지되는 진짜 목록. 나중에 아르페지오 순서를 만들 때 이걸 쓴다.
     std::vector<int> heldNotes;
+    std::array<juce::uint8, 128> velocityForNote {};
 
     // 위 목록을 UI가 안전하게 읽을 수 있게 복제해둔 것 (노트 번호 0~127 → 눌림 여부).
     std::array<std::atomic<bool>, 128> noteIsHeld {};

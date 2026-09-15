@@ -18,3 +18,4 @@ add_subdirectory(${juce_SOURCE_DIR}/extras/AudioPluginHost ${CMAKE_CURRENT_BINAR
 # 연습 예제들 — 새 예제를 추가할 땐 폴더 하나 만들고 아래에 한 줄 추가하면 됨
 # ----------------------------------------------------------------------------
 add_subdirectory(01_midi_arpeggiator)
+add_subdirectory(02_vocal_gate)

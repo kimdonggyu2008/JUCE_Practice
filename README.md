@@ -29,3 +29,4 @@ cmake --build build --config Debug
 | 폴더 | 내용 | 배우는 핵심 |
 | --- | --- | --- |
 | `01_midi_arpeggiator` | 들어온 MIDI 노트를 순서대로 재생하는 아르페지에이터 | `MidiBuffer`, note-on/off 이벤트, MIDI 이펙트 플러그인 구조 |
+| `02_vocal_gate` | 보컬 트랙의 조용한 구간/노이즈를 자동으로 줄여주는 노이즈 게이트 | dB 변환, envelope follower(attack/release smoothing), `AudioProcessorValueTreeState`(파라미터·상태 저장), 커스텀 UI(슬라이더/버튼/레벨 미터) |

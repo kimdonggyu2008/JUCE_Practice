@@ -16,6 +16,12 @@ MidiArpeggiatorEditor::MidiArpeggiatorEditor (MidiArpeggiatorProcessor& p)
     rateAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
                      audioProcessor.apvts, "RATE", rateSlider); 
     addAndMakeVisible (rateSlider);
+
+    modeBox.addItemList(juce::StringArray {"Up", "Down", "Up-Down"}, 1);
+    addAndMakeVisible(modeBox);
+    modeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
+        audioProcessor.apvts, "MODE", modeBox);
+    
     startTimerHz (30);
 }
 
@@ -60,7 +66,7 @@ void MidiArpeggiatorEditor::paint (juce::Graphics& g)
     g.drawFittedText ("Held notes", bounds.removeFromTop (22),
                       juce::Justification::centred, 1);
 
-    bounds.removeFromBottom (56);
+    bounds.removeFromBottom (bottomAreaHeight);   // 아래 컨트롤 자리는 비워둔다
 
     g.setColour (juce::Colours::aqua);
     g.setFont (17.0f);
@@ -72,8 +78,12 @@ void MidiArpeggiatorEditor::paint (juce::Graphics& g)
 void MidiArpeggiatorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced (12);
-    auto bottom = bounds.removeFromBottom (56);
 
-    rateLabel.setBounds (bottom.removeFromTop (20));
-    rateSlider.setBounds (bottom);
+    // 아래에서 100px를 떼어내고, 그 안을 다시 잘라 나눠 쓴다.
+    auto bottom = bounds.removeFromBottom (bottomAreaHeight);
+
+    modeBox.setBounds   (bottom.removeFromBottom (30));   // 맨 아래 30
+    bottom.removeFromBottom (8);                          // 사이 여백
+    rateLabel.setBounds (bottom.removeFromTop (20));      // 남은 것 중 위 20
+    rateSlider.setBounds (bottom);                        // 나머지 전부
 }

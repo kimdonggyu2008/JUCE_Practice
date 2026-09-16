@@ -19,6 +19,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiArpeggiatorProcessor::cr
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         "RATE", "Rate", juce::NormalisableRange<float> (20.0f, 500.0f, 1.0f), 150.0f));
 
+    params.push_back (std::make_unique<juce::AudioParameterChoice> (
+        "MODE", "Mode", juce::StringArray {"Up", "Down", "Up-Down"},0));
+
     return { params.begin(), params.end()};
 }
 
@@ -76,6 +79,8 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     midiMessages.clear();
 
     const float rateMs = apvts.getRawParameterValue("RATE")->load();
+    const int mode = (int) apvts.getRawParameterValue("MODE")->load();
+
     samplesPerStep = (int) (currentSampleRate * rateMs / 1000.0f);
 
     const int numSamples = buffer.getNumSamples();
@@ -99,7 +104,29 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         // 다음 차례 노트를 켠다. %는 "고르기 직전"의 크기로 계산해야 범위를 벗어나지 않는다.
         if (! heldNotes.empty())
         {
-            currentStepIndex = (currentStepIndex + 1) % (int) heldNotes.size();
+            const int n = (int) heldNotes.size();
+            if (mode == 0)
+            {
+                currentStepIndex = (currentStepIndex+1)%n;
+            }
+            
+            else if (mode ==1)
+            {
+                currentStepIndex = (currentStepIndex - 1 + n) % n;
+            }
+            else if (mode == 2)
+            {
+                if (currentStepIndex == 0)
+                {
+                    stepDirection = 1;
+                }
+                else if (currentStepIndex == n - 1)
+                {
+                    stepDirection = -1;
+                }
+                currentStepIndex += stepDirection;
+            }
+            currentStepIndex = juce::jlimit (0, n-1, currentStepIndex);
             lastPlayedNote = heldNotes[(size_t) currentStepIndex];
             midiMessages.addEvent (juce::MidiMessage::noteOn (1, lastPlayedNote, velocityForNote[(size_t) lastPlayedNote]), offset);
         }

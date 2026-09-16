@@ -36,5 +36,8 @@ private:
     juce::Label gateLabel;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gateAttachment;
 
+    juce::ToggleButton latchButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> latchAttachment;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiArpeggiatorEditor)
 };

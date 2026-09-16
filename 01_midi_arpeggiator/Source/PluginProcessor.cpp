@@ -25,6 +25,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiArpeggiatorProcessor::cr
     params.push_back (std::make_unique<juce::AudioParameterFloat> (
         "GATE", "Gate", juce::NormalisableRange<float> (0.05f, 1.0f, 0.01f), 0.5f));
 
+    params.push_back (std::make_unique<juce::AudioParameterBool> ("LATCH", "Latch", false));
+
     return { params.begin(), params.end()};
 }
 
@@ -34,12 +36,17 @@ void MidiArpeggiatorProcessor::prepareToPlay (double sampleRate, int samplesPerB
 
     heldNotes.reserve(128);
 
+    latchedNotes.reserve(128);
+
     currentSampleRate = sampleRate;
 
     samplesSinceLastStep = 0;
     samplesUntilNoteOff = -1;
     lastPlayedNote = -1;
+    needsAllNotesOff = true;
     heldNotes.clear();
+
+    latchedNotes.clear();
 }
 
 void MidiArpeggiatorProcessor::releaseResources() {}
@@ -50,10 +57,9 @@ bool MidiArpeggiatorProcessor::isBusesLayoutSupported (const BusesLayout& layout
     return true;
 }
 
-// MIDI 콜백. 들어온 노트로 목록을 갱신하고, 원본은 버린 뒤 아르페지오를 새로 만들어 내보낸다.
-void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+// 들어온 note-on/off로 노트 목록을 갱신한다. 원본 MIDI는 건드리지 않는다(const).
+void MidiArpeggiatorProcessor::updateHeldNotes (const juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (buffer);
     for (const auto metadata : midiMessages)
     {
         auto message = metadata.getMessage();
@@ -61,9 +67,19 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         if(message.isNoteOn())
         {
             int noteNumber = message.getNoteNumber();
+
+            // 처음 누르는 순간 latch 화음 비우기
+            if(heldNotes.empty())
+                latchedNotes.clear();
+
             // 음 높이 순으로 유지되도록 제자리에 끼워 넣는다 (Up/Down 모드의 전제).
             auto pos = std::lower_bound (heldNotes.begin(), heldNotes.end(), noteNumber);
             heldNotes.insert (pos, noteNumber);
+
+            //중복 안하고 래치 목록에 넣기
+            auto lpos = std::lower_bound (latchedNotes.begin(), latchedNotes.end(), noteNumber);
+            if (lpos == latchedNotes.end() || *lpos != noteNumber)
+                latchedNotes.insert (lpos, noteNumber);
 
             velocityForNote[(size_t) noteNumber] = message.getVelocity();
             noteIsHeld[(size_t) noteNumber].store (true, std::memory_order_relaxed);
@@ -79,11 +95,52 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
             noteIsHeld[(size_t) noteNumber].store (false, std::memory_order_relaxed);
         }
     }
+}
+
+// 바이패스 중. 목록은 계속 갱신해야 해제했을 때 "유령 노트"가 안 생기고,
+// 울리던 아르페지오 노트는 여기서 끄지 않으면 신디에서 영원히 울린다.
+void MidiArpeggiatorProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    juce::ignoreUnused (buffer);
+
+    updateHeldNotes (midiMessages);
+
+    if (needsAllNotesOff)
+    {
+        midiMessages.addEvent(juce::MidiMessage::allNotesOff (1), 0);
+        needsAllNotesOff = false;
+    }
+
+    if (lastPlayedNote >= 0)
+    {
+        midiMessages.addEvent (juce::MidiMessage::noteOff (1, lastPlayedNote), 0);
+        lastPlayedNote = -1;
+        samplesUntilNoteOff = -1;
+    }
+
+    // midiMessages.clear()를 부르지 않는다 — 바이패스는 "입력을 그대로 통과"라는 뜻이다.
+}
+
+// MIDI 콜백. 들어온 노트로 목록을 갱신하고, 원본은 버린 뒤 아르페지오를 새로 만들어 내보낸다.
+void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    juce::ignoreUnused (buffer);
+
+    updateHeldNotes (midiMessages);
 
     midiMessages.clear();
 
+    if (needsAllNotesOff)
+    {
+        midiMessages.addEvent(juce::MidiMessage::allNotesOff (1), 0);
+        needsAllNotesOff = false;
+    }
+
     const float rateMs = apvts.getRawParameterValue("RATE")->load();
     const int mode = (int) apvts.getRawParameterValue("MODE")->load();
+
+    const bool latch = apvts.getRawParameterValue ("LATCH")->load() > 0.5f;
+    const auto& notes = latch ? latchedNotes : heldNotes;
 
     samplesPerStep = (int) (currentSampleRate * rateMs / 1000.0f);
 
@@ -117,9 +174,9 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         }
 
         // 다음 차례 노트를 켠다. %는 "고르기 직전"의 크기로 계산해야 범위를 벗어나지 않는다.
-        if (! heldNotes.empty())
+        if (! notes.empty())
         {
-            const int n = (int) heldNotes.size();
+            const int n = (int) notes.size();
             if (mode == 0)
             {
                 currentStepIndex = (currentStepIndex+1)%n;
@@ -142,7 +199,7 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
                 currentStepIndex += stepDirection;
             }
             currentStepIndex = juce::jlimit (0, n-1, currentStepIndex);
-            lastPlayedNote = heldNotes[(size_t) currentStepIndex];
+            lastPlayedNote = notes[(size_t) currentStepIndex];
             midiMessages.addEvent (juce::MidiMessage::noteOn (1, lastPlayedNote, velocityForNote[(size_t) lastPlayedNote]), offset);
 
             // gateSamples 뒤에 끄도록 예약한다.

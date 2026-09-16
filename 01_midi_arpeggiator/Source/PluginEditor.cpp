@@ -29,6 +29,11 @@ MidiArpeggiatorEditor::MidiArpeggiatorEditor (MidiArpeggiatorProcessor& p)
     gateAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
                      audioProcessor.apvts, "GATE", gateSlider); 
     addAndMakeVisible (gateSlider);
+
+    addAndMakeVisible(latchButton);
+    latchButton.setButtonText("Latch");
+    latchAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.apvts, "LATCH", latchButton);
     
     startTimerHz (30);
 }
@@ -87,10 +92,14 @@ void MidiArpeggiatorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced (12);
 
-    // 아래에서 100px를 떼어내고, 그 안을 다시 잘라 나눠 쓴다.
+    // 아래에서 140px를 떼어내고, 그 안을 다시 잘라 나눠 쓴다.
     auto bottom = bounds.removeFromBottom (bottomAreaHeight);
 
-    modeBox.setBounds   (bottom.removeFromBottom (30));   // 맨 아래 30
+    auto modeRow = bottom.removeFromBottom (30);
+    latchButton.setBounds (modeRow.removeFromRight (90));
+    modeRow.removeFromRight (8);
+    modeBox.setBounds (modeRow);
+    
     bottom.removeFromBottom (8);                          // 사이 여백
 
     

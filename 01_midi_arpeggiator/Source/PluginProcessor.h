@@ -40,6 +40,9 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    // 바이패스 중에 불린다. 목록은 계속 갱신하고, 울리던 노트만 끈 뒤 입력을 그대로 통과시킨다.
+    void processBlockBypassed (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
     juce::AudioProcessorValueTreeState apvts;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -50,8 +53,13 @@ public:
     const std::array<std::atomic<bool>, 128>& getNoteIsHeldSnapshot() const { return noteIsHeld; }
 
 private:
+    // 들어온 note-on/off로 heldNotes·세기·화면 표시를 갱신한다.
+    // processBlock과 processBlockBypassed 양쪽에서 쓰므로 함수로 분리했다.
+    void updateHeldNotes (const juce::MidiBuffer& midiMessages);
+
     // 눌린 순서가 유지되는 진짜 목록. 나중에 아르페지오 순서를 만들 때 이걸 쓴다.
     std::vector<int> heldNotes;
+    std::vector<int> latchedNotes;
     std::array<juce::uint8, 128> velocityForNote {};
 
     // 위 목록을 UI가 안전하게 읽을 수 있게 복제해둔 것 (노트 번호 0~127 → 눌림 여부).
@@ -69,6 +77,10 @@ private:
     int currentStepIndex = 0;
 
     int stepDirection = 1;
+
+    bool needsAllNotesOff = false;
+
+    
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiArpeggiatorProcessor)
 };

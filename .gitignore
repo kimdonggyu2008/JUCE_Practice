@@ -35,3 +35,9 @@ cmake_install.cmake
 # OS Specific
 .DS_Store
 Thumbs.db
+
+# Python (03_pitch_to_midi/prototype)
+.venv/
+__pycache__/
+*.pyc
+03_pitch_to_midi/prototype/out/

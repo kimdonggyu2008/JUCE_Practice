@@ -19,3 +19,4 @@ add_subdirectory(${juce_SOURCE_DIR}/extras/AudioPluginHost ${CMAKE_CURRENT_BINAR
 # ----------------------------------------------------------------------------
 add_subdirectory(01_midi_arpeggiator)
 add_subdirectory(02_vocal_gate)
+add_subdirectory(03_pitch_to_midi)

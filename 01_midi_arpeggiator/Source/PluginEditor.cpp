@@ -4,7 +4,7 @@
 MidiArpeggiatorEditor::MidiArpeggiatorEditor (MidiArpeggiatorProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    setSize (400, 300);
+    setSize (400, 340);
 
     rateSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 70, 20);
     rateSlider.setTextValueSuffix (" ms");
@@ -34,6 +34,17 @@ MidiArpeggiatorEditor::MidiArpeggiatorEditor (MidiArpeggiatorProcessor& p)
     latchButton.setButtonText("Latch");
     latchAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         audioProcessor.apvts, "LATCH", latchButton);
+
+
+    divisionBox.addItemList (juce::StringArray { "1/4", "1/8", "1/16", "1/32" }, 1);
+    addAndMakeVisible (divisionBox);
+    divisionAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
+        audioProcessor.apvts, "DIVISION", divisionBox);
+
+    syncButton.setButtonText ("Sync");
+    addAndMakeVisible (syncButton);
+    syncAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
+        audioProcessor.apvts, "SYNC", syncButton);
     
     startTimerHz (30);
 }
@@ -44,7 +55,12 @@ MidiArpeggiatorEditor::~MidiArpeggiatorEditor() {}
 // 내용이 바뀐 경우에만 다시 그리도록 요청한다.
 void MidiArpeggiatorEditor::timerCallback()
 {
+
     const auto& held = audioProcessor.getNoteIsHeldSnapshot();
+
+    const bool sync = audioProcessor.apvts.getRawParameterValue ("SYNC")->load() > 0.5f;
+    rateSlider.setEnabled (! sync);
+    divisionBox.setEnabled (sync);
 
     juce::StringArray names;
 
@@ -92,7 +108,7 @@ void MidiArpeggiatorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced (12);
 
-    // 아래에서 140px를 떼어내고, 그 안을 다시 잘라 나눠 쓴다.
+    // 아래 컨트롤 영역을 떼어내고, 그 안을 다시 잘라 나눠 쓴다.
     auto bottom = bounds.removeFromBottom (bottomAreaHeight);
 
     auto modeRow = bottom.removeFromBottom (30);
@@ -100,9 +116,15 @@ void MidiArpeggiatorEditor::resized()
     modeRow.removeFromRight (8);
     modeBox.setBounds (modeRow);
     
-    bottom.removeFromBottom (8);                          // 사이 여백
-
+    bottom.removeFromBottom (8);   
     
+    auto syncRow = bottom.removeFromBottom (30);
+    syncButton.setBounds (syncRow.removeFromRight (90));
+    syncRow.removeFromRight (8);
+    divisionBox.setBounds(syncRow);
+
+    bottom.removeFromBottom (8);
+
     rateLabel.setBounds(bottom.removeFromTop(20));
     rateSlider.setBounds(bottom.removeFromTop(30));
     gateLabel.setBounds(bottom.removeFromTop(20));

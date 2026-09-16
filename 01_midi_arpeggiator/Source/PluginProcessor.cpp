@@ -27,6 +27,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiArpeggiatorProcessor::cr
 
     params.push_back (std::make_unique<juce::AudioParameterBool> ("LATCH", "Latch", false));
 
+    params.push_back (std::make_unique<juce::AudioParameterBool> ("SYNC", "Sync", false));
+    params.push_back (std::make_unique<juce::AudioParameterChoice> ("DIVISION","Division", juce::StringArray {"1/4", "1/8", "1/16", "1/32"}, 2));
+
+
     return { params.begin(), params.end()};
 }
 
@@ -142,7 +146,29 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     const bool latch = apvts.getRawParameterValue ("LATCH")->load() > 0.5f;
     const auto& notes = latch ? latchedNotes : heldNotes;
 
-    samplesPerStep = (int) (currentSampleRate * rateMs / 1000.0f);
+    double bpm = 120.0;
+
+    if (auto* playHead = getPlayHead())
+        if (auto position = playHead->getPosition())
+            if (auto hostBpm = position->getBpm())
+                bpm = *hostBpm;
+
+    const bool sync = apvts.getRawParameterValue("SYNC")->load() > 0.5f;
+    const int division = (int) apvts.getRawParameterValue ("DIVISION")->load();
+
+    if (sync)
+    {
+        static constexpr double beatsPerDivision[] = { 1.0, 0.5, 0.25, 0.125 };
+
+        const double secondsPerBeats = 60.0 / juce::jmax (1.0, bpm);
+        const double secondsPerStep = secondsPerBeats * beatsPerDivision[division];
+
+        samplesPerStep = (int) (currentSampleRate * secondsPerStep);
+    }
+    else
+    {
+        samplesPerStep = (int) (currentSampleRate * rateMs / 1000.0f);
+    }
 
     const int numSamples = buffer.getNumSamples();
     const float gate = apvts.getRawParameterValue("GATE")->load();

@@ -21,6 +21,14 @@ MidiArpeggiatorEditor::MidiArpeggiatorEditor (MidiArpeggiatorProcessor& p)
     addAndMakeVisible(modeBox);
     modeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
         audioProcessor.apvts, "MODE", modeBox);
+
+
+    gateLabel.setText("Gate", juce::dontSendNotification);
+    gateLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible(gateLabel);
+    gateAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+                     audioProcessor.apvts, "GATE", gateSlider); 
+    addAndMakeVisible (gateSlider);
     
     startTimerHz (30);
 }
@@ -84,6 +92,10 @@ void MidiArpeggiatorEditor::resized()
 
     modeBox.setBounds   (bottom.removeFromBottom (30));   // 맨 아래 30
     bottom.removeFromBottom (8);                          // 사이 여백
-    rateLabel.setBounds (bottom.removeFromTop (20));      // 남은 것 중 위 20
-    rateSlider.setBounds (bottom);                        // 나머지 전부
+
+    
+    rateLabel.setBounds(bottom.removeFromTop(20));
+    rateSlider.setBounds(bottom.removeFromTop(30));
+    gateLabel.setBounds(bottom.removeFromTop(20));
+    gateSlider.setBounds(bottom.removeFromTop(30));
 }

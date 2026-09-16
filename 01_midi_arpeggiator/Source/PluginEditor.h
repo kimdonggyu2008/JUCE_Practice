@@ -26,10 +26,15 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> rateAttachment;
 
     // 아래쪽 컨트롤 영역의 높이. paint()와 resized()가 같은 값을 써야 겹치지 않는다.
-    static constexpr int bottomAreaHeight = 100;
+    static constexpr int bottomAreaHeight = 140;
 
     juce::ComboBox modeBox;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modeAttachment;
+
+
+    juce::Slider gateSlider;
+    juce::Label gateLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gateAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MidiArpeggiatorEditor)
 };

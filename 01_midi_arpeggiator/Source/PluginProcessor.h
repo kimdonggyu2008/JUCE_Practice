@@ -62,6 +62,10 @@ private:
     int samplesSinceLastStep = 0;         // 지난 박자 이후 흐른 샘플 수
     int lastPlayedNote = -1;              // 지금 울리고 있는 노트 (-1 = 없음)
 
+    // 예약된 note-off까지 남은 샘플 수 (이번 블록 시작 기준). -1 = 예약 없음.
+    // "경계를 지나갔나" 대신 "몇 샘플 남았나"를 세므로 블록 크기와 무관하게 정확하다.
+    int samplesUntilNoteOff = -1;
+
     int currentStepIndex = 0;
 
     int stepDirection = 1;

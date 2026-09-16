@@ -22,6 +22,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiArpeggiatorProcessor::cr
     params.push_back (std::make_unique<juce::AudioParameterChoice> (
         "MODE", "Mode", juce::StringArray {"Up", "Down", "Up-Down"},0));
 
+    params.push_back (std::make_unique<juce::AudioParameterFloat> (
+        "GATE", "Gate", juce::NormalisableRange<float> (0.05f, 1.0f, 0.01f), 0.5f));
+
     return { params.begin(), params.end()};
 }
 
@@ -34,6 +37,7 @@ void MidiArpeggiatorProcessor::prepareToPlay (double sampleRate, int samplesPerB
     currentSampleRate = sampleRate;
 
     samplesSinceLastStep = 0;
+    samplesUntilNoteOff = -1;
     lastPlayedNote = -1;
     heldNotes.clear();
 }
@@ -84,21 +88,32 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     samplesPerStep = (int) (currentSampleRate * rateMs / 1000.0f);
 
     const int numSamples = buffer.getNumSamples();
+    const float gate = apvts.getRawParameterValue("GATE")->load();
+    const int gateSamples = juce::jmax (1,(int) (samplesPerStep*gate));
 
     // prepareToPlay 전에 불릴 일은 없지만, 0이면 아래 %에서 0으로 나누게 되므로 방어.
     if (samplesPerStep <= 0)
         return;
+    
+    // 예약된 note-off가 이번 블록 안에 들어오면 그 자리에서 끈다.
+    if (lastPlayedNote >= 0 && samplesUntilNoteOff >= 0 && samplesUntilNoteOff < numSamples)
+    {
+        midiMessages.addEvent (juce::MidiMessage::noteOff (1, lastPlayedNote), samplesUntilNoteOff);
+        lastPlayedNote = -1;
+        samplesUntilNoteOff = -1;
+    }
 
     if (samplesSinceLastStep + numSamples >= samplesPerStep)
     {
         // 박자 경계가 이 블록의 몇 번째 샘플에 걸리는지.
         const int offset = juce::jlimit (0, numSamples - 1, samplesPerStep - samplesSinceLastStep);
 
-        // 울리던 노트를 먼저 끈다.
+        // Gate가 1.0이라 아직 안 꺼졌으면 여기서 끈다 (안전망).
         if (lastPlayedNote >= 0)
         {
             midiMessages.addEvent (juce::MidiMessage::noteOff (1, lastPlayedNote), offset);
             lastPlayedNote = -1;
+            samplesUntilNoteOff = -1;
         }
 
         // 다음 차례 노트를 켠다. %는 "고르기 직전"의 크기로 계산해야 범위를 벗어나지 않는다.
@@ -129,8 +144,23 @@ void MidiArpeggiatorProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
             currentStepIndex = juce::jlimit (0, n-1, currentStepIndex);
             lastPlayedNote = heldNotes[(size_t) currentStepIndex];
             midiMessages.addEvent (juce::MidiMessage::noteOn (1, lastPlayedNote, velocityForNote[(size_t) lastPlayedNote]), offset);
+
+            // gateSamples 뒤에 끄도록 예약한다.
+            samplesUntilNoteOff = offset + gateSamples;
+
+            // 짧은 노트라 같은 블록 안에서 끝나면 바로 여기서 끈다.
+            if (samplesUntilNoteOff < numSamples)
+            {
+                midiMessages.addEvent (juce::MidiMessage::noteOff (1, lastPlayedNote), samplesUntilNoteOff);
+                lastPlayedNote = -1;
+                samplesUntilNoteOff = -1;
+            }
         }
     }
+
+    // 예약이 남아 있으면 이번 블록만큼 당겨둔다 (다음 블록 기준으로 환산).
+    if (samplesUntilNoteOff >= 0)
+        samplesUntilNoteOff -= numSamples;
 
     // 시간은 조건과 무관하게 매 블록 흐른다 — 반드시 if 바깥.
     samplesSinceLastStep = (samplesSinceLastStep + numSamples) % samplesPerStep;

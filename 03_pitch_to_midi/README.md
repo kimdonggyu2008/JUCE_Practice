@@ -52,8 +52,8 @@ PitchDetector (공통 인터페이스)
 2. [x] `prototype/yin.py` — YIN 참조 구현. 합성 신호에서 옥타브 오류 없음, 평균 오차 0.1 cents 이하 (글리산도 -6.5 cents는 정답 규칙 차이)
 3. [x] `prototype/to_midi.py` — 음정 곡선 → MIDI 노트 (단순 반올림 vs 히스테리시스·최소 길이). `demo_to_midi.py`로 .mid와 재합성 wav 생성
 4. [ ] `prototype/evaluate.py` — 정확도 지표
-5. [ ] `Source/YinPitchDetector.cpp` — C++로 옮기기
-6. [ ] `prototype/null_test.py` — 파이썬 vs C++ 비교 통과
+5. [x] `Source/YinPitchDetector.cpp` — C++로 옮기기 (핵심 다섯 줄은 파이썬 원본을 보고 직접 번역)
+6. [x] `prototype/null_test.py` — 파이썬 vs C++ 비교 통과 (테스트 신호 7개 전부, 최대 차이 0.0001Hz 미만). 빌드부터 비교까지 명령 하나
 7. [ ] `PluginProcessor` — 분석 창 버퍼, Hz → MIDI 노트, note-on/off
 8. [ ] 실시간 측정 — 지연·CPU
 9. [ ] (2단계) 신경망 검출기를 같은 인터페이스로 추가해 비교
